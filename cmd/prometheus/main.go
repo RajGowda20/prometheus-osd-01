@@ -218,6 +218,21 @@ func (c *flagConfig) setFeatureListOptions(logger log.Logger) error {
 	return nil
 }
 
+type customLogger struct {
+	logger log.Logger
+}
+
+func (c *customLogger) Log(keyvals ...interface{}) error {
+	// Get the user's current timestamp.
+	currentTimestamp := time.Now().Format("2006-01-02 15:04:05")
+
+	// Prepend the current timestamp to the key-value pairs.
+	kvs := append([]interface{}{"ts", currentTimestamp}, keyvals...)
+
+	// Log the key-value pairs using the underlying logger.
+	return c.logger.Log(kvs...)
+}
+
 func main() {
 	if os.Getenv("DEBUG") != "" {
 		runtime.SetBlockProfileRate(20)
@@ -434,7 +449,11 @@ func main() {
 		os.Exit(2)
 	}
 
-	logger := promlog.New(&cfg.promlogConfig)
+	// logger1 := promlog.New(&cfg.promlogConfig)
+
+	logger := &customLogger{
+		logger: log.NewLogfmtLogger(log.NewSyncWriter(os.Stdout)),
+	}
 
 	if err := cfg.setFeatureListOptions(logger); err != nil {
 		fmt.Fprintln(os.Stderr, fmt.Errorf("Error parsing feature list: %w", err))
